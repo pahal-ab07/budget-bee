@@ -7,8 +7,28 @@ import { getDashboardData, getUserAccounts } from '@/actions/dashboard';
 import React, { Suspense } from 'react';
 import { AccountCard } from './_components/account-card';
 import DashboardOverview from './_components/transaction-overview';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 async function DashboardPage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleManualReport = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/manual-monthly-report', { method: 'POST' });
+      if (res.ok) {
+        toast.success('Monthly report triggered! Check your email soon.');
+      } else {
+        toast.error('Failed to trigger monthly report.');
+      }
+    } catch (e) {
+      toast.error('Error triggering monthly report.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const accounts = await getUserAccounts();
 
   const defaultAccount = accounts?.find((account) => account.isDefault);
@@ -22,7 +42,14 @@ async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      
+      {/* Manual Monthly Report Trigger */}
+      <button
+        onClick={handleManualReport}
+        disabled={loading}
+        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 mb-4"
+      >
+        {loading ? 'Triggering Report...' : 'Send Monthly Report to My Email'}
+      </button>
       {/* Budget Progress */}
       {defaultAccount && (
         <BudgetProgress
