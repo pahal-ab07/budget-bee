@@ -2,7 +2,6 @@ import arcjet, { createMiddleware, detectBot, shield } from "@arcjet/next";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-
 const isProtectedRoute = createRouteMatcher([
     "/dashboard(.*)",
     "/account(.*)",
@@ -11,44 +10,39 @@ const isProtectedRoute = createRouteMatcher([
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY,
-  // characteristics: ["userId"], // Track based on Clerk userId
   rules: [
-    // Shield protection for content and security
-    shield({
-      mode: "LIVE",
-    }),
+    shield({ mode: "LIVE" }),
     detectBot({
-      mode: "LIVE", // will block requests. Use "DRY_RUN" to log only
+      mode: "LIVE",
       allow: [
-        "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
-        "GO_HTTP", // For Inngest
-      
+        "CATEGORY:SEARCH_ENGINE",
+        "GO_HTTP",
       ],
     }),
   ],
 });
 
-// Create base Clerk middleware
 const clerk = clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
-
   if (!userId && isProtectedRoute(req)) {
     const { redirectToSignIn } = await auth();
     return redirectToSignIn();
   }
-
   return NextResponse.next();
 });
 
-// Chain middlewares - ArcJet runs first, then Clerk
-export default createMiddleware(aj, clerk);
+export default function mainMiddleware(req, event) {
+  // Exclude /api/inngest from all middleware
+  if (req.nextUrl.pathname.startsWith('/api/inngest')) {
+    return NextResponse.next();
+  }
+  return createMiddleware(aj, clerk)(req, event);
+}
 
 export const config = {
   matcher: [
-    // Exclude /api/inngest from middleware
-    '/((?!_next|api/inngest|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes except /api/inngest
-    '/api/(?!inngest).*',
+    '/((?!_next|.*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/api/:path*',
     '/trpc(.*)',
   ],
 };
