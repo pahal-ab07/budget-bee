@@ -100,12 +100,12 @@ export default function EmailTemplate({
             )}
 
             {/* AI Insights */}
-            {data?.insights && (
+            {Array.isArray(data?.insights) && data.insights.length > 0 && (
               <Section style={styles.section}>
                 <Heading style={styles.heading}>Welth Insights</Heading>
                 {data.insights.map((insight, index) => (
                   <Text key={index} style={styles.text}>
-                    • {insight}
+                    • {typeof insight === 'string' ? insight : ''}
                   </Text>
                 ))}
               </Section>
